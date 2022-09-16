@@ -8,9 +8,9 @@ int main(int argc, char* argv[]) {
     int delta = atoi(argv[3]);
     int len = atoi(argv[4]);
 
-    srandom(seed);
+    srand(seed);
     while (len-- > 0) {
-        start += random() % (2 * delta + 1) - delta;
+        start += rand() % (2 * delta + 1) - delta;
         printf("%d ", start);
     }
     printf("\n");

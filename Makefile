@@ -2,7 +2,7 @@ BIN = bin
 SRC = src
 
 CC = gcc
-CFLAGS = -std=c99 -O3
+CFLAGS = -std=c99 -lpthread -O3
 # -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
 # -arch=native
 
