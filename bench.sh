@@ -1,4 +1,12 @@
 #!/bin/bash
+#SBATCH --job-name=dtw
+#SBATCH --ntasks=5
+#SBATCH --nodes=1
+#SBATCH --time:00:01:00
+
+function is_sling {
+    which sinfo >/dev/null
+}
 
 function err {
     echo $1 >&1
@@ -42,7 +50,11 @@ function bench_algs {
         {
             printf "%s %s %s %s %s\n" n m value realtime cputime
             for len in $lens; do
-                bin/dtw $alg "$DST/a-$len.in" "$DST/b-$len.in" $thread_count
+                if is_sling; then
+                    srun --ntasks=1 bin/dtw $alg "$DST/a-$len.in" "$DST/b-$len.in" $arg
+                else
+                    bin/dtw $alg "$DST/a-$len.in" "$DST/b-$len.in" $arg
+                fi
             done
         } | tee "$results"
     done
@@ -53,9 +65,13 @@ function bench_algs {
 function show_help {
     echo "Run as: $(basename $0) <lengths> <algorithms> <options>"
     echo
-
-    echo Algorithms
-    echo "  $RECT"
+    echo '  Lengths:'
+    echo '    small halfmedium medium big'
+    echo '  Algorithms:'
+    echo "    $RECT"
+    echo "    $DIAG"
+    echo "    $SKEW"
+    exit 0
 }
 
 # Settings for sequence generator
@@ -88,7 +104,7 @@ STRIDES="2,4,8"
 RECT_BASE=$(prefix rect_ fw,bw,fwrev)
 RECT_COMB=$(prefix rect_ fwbw,fwbw_par,fwfwrev,fwfwrev_par)
 RECT_STRIDES=$(prefix rect_fw_strides- $STRIDES)
-RECT="$RECT_BASE $RECT_COMB"
+RECT="$RECT_BASE $RECT_COMB $RECT_STRIDES"
 #
 DIAG=$(prefix diag_ fw,bw,fwbw,fwbw_par)
 SKEW=$(prefix skew_ fw,bw,fwbw,fwbw_par)
@@ -97,6 +113,8 @@ FW=$(postfix _fw rect,diag,skew)
 BW=$(postfix _bw rect,diag,skew)
 FWBW=$(postfix _fwbw rect,diag,skew)
 PAR=$(postfix _fwbw_par rect,diag,skew)
+#
+ALLALGS="$RECT $DIAG $SKEW"
 
 # Options
 COMPILE=false
@@ -129,6 +147,9 @@ done
 # sort lens
 lens=$(printf "%s\n" $lens | sort -g | uniq)
 
+echo Selected options:
+echo "  Lengthes: $(echo $lens | tr "\n" ' ')"
+echo "  Algorithms: $algs"
 
 # compile
 test -d bin || COMPILE=true
