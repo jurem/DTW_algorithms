@@ -3,6 +3,7 @@
 #SBATCH --output=dtw.out
 #SBATCH --ntasks=10
 #SBATCH --nodes=1
+#SBATCH --exclusive
 
 # --- SaBATCH --time:00:01:00
 
@@ -96,6 +97,7 @@ STRIDES="2,4,8"
 #
 RECT_BASE=$(prefix rect_ fw,bw,fr)
 RECT_COMB=$(prefix rect_ fwbw,fwfr,fwbw_par,fwfr_par)
+RECT_PAR=$(prefix rect_ fwbw_par,fwfr_par)
 RECT_STRIDES=$(prefix rect_fw_strides- $STRIDES)
 RECT="$RECT_BASE $RECT_COMB $RECT_STRIDES"
 #
@@ -105,6 +107,7 @@ DIAG="$DIAG_BASE $DIAG_COMB"
 #
 SKEW_BASE=$(prefix skew_ fw,bw)
 SKEW_COMB=$(prefix skew_ fwbw,fwbw_par)
+SKEW_PAR=skew_fwbw_par
 SKEW_STRIDES=$(prefix skew_fw_strides- $STRIDES)
 SKEW="$SKEW_BASE $SKEW_COMB $SKEW_STRIDES"
 #
@@ -112,6 +115,7 @@ FW=$(postfix _fw rect,skew)
 BW=$(postfix _bw rect,skew)
 FWBW=$(postfix _fwbw rect,skew)
 PAR=$(postfix _fwbw_par rect,skew)
+STRIDES="$RECT_STRIDES $SKEW_STRIDES"
 #
 ALLALGS="$RECT $DIAG $SKEW"
 
@@ -127,10 +131,10 @@ while test -n "$1"; do
             lens="$lens $($1)"
         ;;
         # determine algorithms
-        rect_base|rect_comb|rect_strides|rect|\
+        rect_base|rect_comb|rect_par|rect_strides|rect|\
         diag|\
-        skew|skew_strides|\
-        fw|bw|fwbw|par)
+        skew_base|skew_comb|skew_par|skew_strides|skew|\
+        fw|bw|fwbw|par|strides)
             var=$(echo $1 | tr "a-z" "A-Z")
             algs="$algs ${!var}"
         ;;
