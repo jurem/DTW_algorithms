@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=dtw
 #SBATCH --output=dtw.out
-#SBATCH --ntasks=5
+#SBATCH --ntasks=10
 #SBATCH --nodes=1
+
 # --- SaBATCH --time:00:01:00
 
 function is_sling {
@@ -18,16 +19,12 @@ function small {
     seq 1000 1000 10000
 }
 
-function halfmedium {
-    seq 10000 10000 50000
-}
-
 function medium {
-    seq 10000 10000 100000
+    seq 10000 5000 50000
 }
 
 function big {
-    seq 100000 100000 20000
+    seq 50000 10000 100000
 }
 
 function bench_algs {
@@ -111,10 +108,10 @@ SKEW_COMB=$(prefix skew_ fwbw,fwbw_par)
 SKEW_STRIDES=$(prefix skew_fw_strides- $STRIDES)
 SKEW="$SKEW_BASE $SKEW_COMB $SKEW_STRIDES"
 #
-FW=$(postfix _fw rect,diag,skew)
-BW=$(postfix _bw rect,diag,skew)
-FWBW=$(postfix _fwbw rect,diag,skew)
-PAR=$(postfix _fwbw_par rect,diag,skew)
+FW=$(postfix _fw rect,skew)
+BW=$(postfix _bw rect,skew)
+FWBW=$(postfix _fwbw rect,skew)
+PAR=$(postfix _fwbw_par rect,skew)
 #
 ALLALGS="$RECT $DIAG $SKEW"
 
@@ -140,7 +137,14 @@ while test -n "$1"; do
         fig1)
             algs="$algs rect_fw rect_bw rect_fwbw rect_fwbw rect_fwbw_par" ;;
         optimize)
-            algs="$algs rect_fw rect_fw1" ;;            
+            algs="$algs rect_fw rect_fw1"
+        ;;
+        alg-*)
+            algs="$algs ${1#alg-}"
+        ;;
+        best)
+            algs="$algs skew_fwbw_par"
+        ;;    
         # destination folder
         results-*)
             DST="$1" ;;
