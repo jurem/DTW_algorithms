@@ -102,8 +102,14 @@ RECT_COMB=$(prefix rect_ fwbw,fwfr,fwbw_par,fwfr_par)
 RECT_STRIDES=$(prefix rect_fw_strides- $STRIDES)
 RECT="$RECT_BASE $RECT_COMB $RECT_STRIDES"
 #
-DIAG=$(prefix diag_ fw,bw,fwbw,fwbw_par)
-SKEW=$(prefix skew_ fw,bw,fwbw,fwbw_par)
+DIAG_BASE=$(prefix diag_ fw,bw)
+DIAG_COMB=$(prefix diag_ fwbw,fwbw_par)
+DIAG="$DIAG_BASE $DIAG_COMB"
+#
+SKEW_BASE=$(prefix skew_ fw,bw)
+SKEW_COMB=$(prefix skew_ fwbw,fwbw_par)
+SKEW_STRIDES=$(prefix skew_fw_strides- $STRIDES)
+SKEW="$SKEW_BASE $SKEW_COMB $SKEW_STRIDES"
 #
 FW=$(postfix _fw rect,diag,skew)
 BW=$(postfix _bw rect,diag,skew)
