@@ -8,6 +8,10 @@
 #include <math.h>
 #include "common.h"
 
+// basics
+#include "algs_base.h"
+#include "algs_blocks.h"
+// algorithms
 #include "algs_rect.h"
 #include "algs_diag.h"
 #include "algs_skew.h"
@@ -23,11 +27,11 @@ typedef struct DTWInfo {
 const DTWInfo algs[] = {
     { "rect_fw", dtw_rect_fw },
     { "rect_bw", dtw_rect_bw },
+    { "rect_fr", dtw_rect_fr },
     { "rect_fwbw", dtw_rect_fwbw },
+    { "rect_fwfr", dtw_rect_fwfr },
     { "rect_fwbw_par", dtw_rect_fwbw_par },
-    { "rect_fwrev", dtw_rect_fwrev },
-    { "rect_fwfwrev", dtw_rect_fwfwrew },
-    { "rect_fwfwrev_par", dtw_rect_fwfwrew_par },
+    { "rect_fwfr_par", dtw_rect_fwfr_par },
     { "rect_fw_strides", dtw_rect_fw_strides },
     { "diag_fw", dtw_diag_fw },
     { "diag_bw", dtw_diag_bw1 },

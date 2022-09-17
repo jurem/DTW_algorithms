@@ -15,7 +15,7 @@ $(BIN):
 	@mkdir -p $(BIN)
 
 
-$(BIN)/dtw.o: $(SRC)/dtw.c $(SRC)/common.h $(SRC)/barrier.h $(SRC)/algs.h $(SRC)/algs_rect.h $(SRC)/algs_diag.h $(SRC)/algs_skew.h
+$(BIN)/dtw.o: $(SRC)/dtw.c $(SRC)/common.h $(SRC)/barrier.h $(SRC)/algs.h $(SRC)/algs_rect.h $(SRC)/algs_diag.h $(SRC)/algs_skew.h $(SRC)/algs_blocks.h $(SRC)/algs_base.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 

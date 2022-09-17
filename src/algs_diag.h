@@ -14,12 +14,7 @@
 val_t dtw_diag_fw(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n <= m
     tab_t t = TNEW(n, m);
-    // init first row and col
-    T_(0, 0) = DIST(a[0], b[0]);
-    for (int i = 1; i < n; i++)
-        T_(i, 0) = DIST(a[i], b[0]) + T_(i - 1, 0);
-    for (int j = 1; j < m; j++)
-        T_(0, j) = DIST(a[0], b[j]) + T_(0, j - 1);
+    fw_init(t, a, b, n, m, n);
     // left triangle
     for (int j = 2; j < n; j++)
         for (int i = 1; i < j; i++)
@@ -43,12 +38,7 @@ val_t dtw_diag_fw(seq_t a, size_t n, seq_t b, size_t m) {
 val_t dtw_diag_bw1(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n <= m
     tab_t t = TNEW(n, m);
-    // init first row and col
-    T_(n - 1, m - 1) = DIST(a[n - 1], b[m - 1]);
-    for (int i = n - 2; i >= 0; i--)
-        T_(i, m - 1) = DIST(a[i], b[m - 1]) + T_(i + 1, m - 1);
-    for (int j = m - 2; j >= 0; j--)
-        T_(n - 1, j) = DIST(a[n - 1], b[j]) + T_(n - 1, j + 1);
+    bw_init(t, a, b, n, m, 0);
     // right triangle
     for (int j = 2; j <= n - 1; j++)
         for (int i = 2; i <= j; i++)
@@ -69,12 +59,7 @@ val_t dtw_diag_bw1(seq_t a, size_t n, seq_t b, size_t m) {
 val_t dtw_diag_bw(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n >= m
     tab_t t = TNEW(n, m);
-    // init last row and col
-    T_(n - 1, m - 1) = DIST(a[n - 1], b[m - 1]);
-    for (int i = n - 2; i >= 0; i--)
-        T_(i, m - 1) = DIST(a[i], b[m - 1]) + T_(i + 1, m - 1);
-    for (int j = m - 2; j >= 0; j--)
-        T_(n - 1, j) = DIST(a[n - 1], b[j]) + T_(n - 1, j + 1);
+    bw_init(t, a, b, n, m, 0);
     // right triangle
     for (int i = 2; i <= m - 1; i++)
         for (int j = 1; j < i; j++)
@@ -100,12 +85,7 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = n / 2 + (m - 1) / 2;
     // top half
-    // init first row and col
-    T_(0, 0) = DIST(a[0], b[0]);
-    for (int i = 1; i <= h; i++)
-        T_(i, 0) = DIST(a[i], b[0]) + T_(i - 1, 0);
-    for (int j = 1; j < m; j++)
-        T_(0, j) = DIST(a[0], b[j]) + T_(0, j - 1);
+    fw_init(t, a, b, n, m, h);
     // upper triangle
     for (int i = 1; i <= m - 2; i++)
         for (int j = 0; j < i; j++)
@@ -115,12 +95,7 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
         for (int j = 0; j < m - 1; j++)
             T_(i - j, j + 1) = DIST(a[i], b[j]) + RELAX_FW_(i - j, j + 1);
     // bottom half
-    // init last row and col
-    T_(n - 1, m - 1) = DIST(a[n - 1], b[m - 1]);
-    for (int i = n - 2; i > h - m + 1; i--)
-        T_(i, m - 1) = DIST(a[i], b[m - 1]) + T_(i + 1, m - 1);
-    for (int j = m - 2; j >= 0; j--)
-        T_(n - 1, j) = DIST(a[n - 1], b[j]) + T_(n - 1, j + 1);
+    bw_init(t, a, b, n, m, h);
     // lower triangle
     for (int i = 0; i <= m - 3; i++)
         for (int j = 0; j <= i; j++)

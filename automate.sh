@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=dtw
+#SBATCH --output=dtw.out
 #SBATCH --ntasks=5
 #SBATCH --nodes=1
-#SBATCH --time:00:01:00
+# --- SaBATCH --time:00:01:00
 
 function is_sling {
     which sinfo >/dev/null
@@ -39,14 +40,15 @@ function bench_algs {
         bin/genseq $((SEED+1)) $START $DELTA $len >"$DST/b-$len.in"
     done
     #
+    echo 'Benchmarking ...'
     for alg in $algs; do
         local results="$DST/$alg.csv"
-        $OVERWRITE || { test -f "$results" && continue; }
+        echo -n "Executing $alg ..."
+        $OVERWRITE || { test -f "$results" && echo " skipped" && continue; }
+        echo
         # <full_name>=<algorithm>-<optional_argument>
         arg=${alg##*-}
         alg=${alg%%-*}
-        test -n "$arg" && local prefix=" with argument $arg"
-        echo "Benchmarking $alg$prefix"
         {
             printf "%s %s %s %s %s\n" n m value realtime cputime
             for len in $lens; do
@@ -74,16 +76,6 @@ function show_help {
     exit 0
 }
 
-# Settings for sequence generator
-SEED=42
-START=100
-DELTA=2
-
-# Destination folder
-DST=results-$(hostname)
-mkdir -p $DST
-
-
 function prefix {
     local p=$1
     shift
@@ -96,13 +88,17 @@ function postfix {
     eval "echo {$*}$p"
 }
 
+# Settings for sequence generator
+SEED=42
+START=100
+DELTA=2
 
 # Algorithms
 FAMILIES="rect,diag,skew"
 STRIDES="2,4,8"
 #
-RECT_BASE=$(prefix rect_ fw,bw,fwrev)
-RECT_COMB=$(prefix rect_ fwbw,fwbw_par,fwfwrev,fwfwrev_par)
+RECT_BASE=$(prefix rect_ fw,bw,fr)
+RECT_COMB=$(prefix rect_ fwbw,fwfr,fwbw_par,fwfr_par)
 RECT_STRIDES=$(prefix rect_fw_strides- $STRIDES)
 RECT="$RECT_BASE $RECT_COMB $RECT_STRIDES"
 #
@@ -118,6 +114,7 @@ ALLALGS="$RECT $DIAG $SKEW"
 
 # Options
 COMPILE=false
+BENCH=false
 OVERWRITE=false
 PLOT=false
 while test -n "$1"; do
@@ -134,8 +131,16 @@ while test -n "$1"; do
             var=$(echo $1 | tr "a-z" "A-Z")
             algs="$algs ${!var}"
         ;;
+        fig1)
+            algs="$algs rect_fw rect_bw rect_fwbw rect_fwbw rect_fwbw_par" ;;
+        optimize)
+            algs="$algs rect_fw rect_fw1" ;;            
+        # destination folder
+        results-*)
+            DST="$1" ;;
         # options
         compile) COMPILE=true ;;
+        bench) BENCH=true ;;
         overwrite) OVERWRITE=true ;;
         plot) PLOT=true ;;
         #
@@ -144,11 +149,19 @@ while test -n "$1"; do
     esac
     shift
 done
-# sort lens
-lens=$(printf "%s\n" $lens | sort -g | uniq)
 
+# Sort lens and algs
+lens=$(printf "%s\n" $lens | sort -g | uniq)
+algs=$(printf "%s\n" $algs | sort | uniq | tr "\n" ' ')
+
+# Set destination folder
+test -z "$DST" && DST=results-$(hostname)
+mkdir -p $DST
+
+# Print settings
 echo Selected options:
-echo "  Lengthes: $(echo $lens | tr "\n" ' ')"
+echo "  Destination folder: $DST"
+echo "  Lengths: $(echo $lens | tr "\n" ' ')"
 echo "  Algorithms: $algs"
 
 # compile
@@ -159,7 +172,9 @@ if $COMPILE; then
 fi
 
 # bench
-bench_algs "$algs" "$lens"
+if $BENCH; then
+    bench_algs "$algs" "$lens"
+fi
 
 # plot
 if $PLOT; then

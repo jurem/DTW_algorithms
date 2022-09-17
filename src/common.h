@@ -17,7 +17,7 @@ void error(const int status, const char * fmt, ...) {
     exit(status);
 }
 
-// ********** values **********
+// ********** value representation **********
 
 #ifdef USE_FLOAT
     typedef float val_t;
@@ -29,31 +29,25 @@ void error(const int status, const char * fmt, ...) {
     #define VALFMT      "d"
 #endif
 
-// ********** value macros **********
-
-//#define ABS(a)                  (((a) >= 0) ? (a) : (-(a)))
-#define ABS(a)                  abs(a)
-#define DIST(a, b)              ABS((a) - (b))
-#define MIN(a, b)               ((a) <= (b) ? (a) : (b))
-#define MIN3(a, b, c)           MIN((a), MIN((b), (c)))
-#define MAX(a, b)               ((a) >= (b) ? (a) : (b))
-
 // ********** sequences and tables **********
 
 typedef val_t* seq_t;
 typedef val_t* tab_t;
 
+// ********** table access **********
+
 // element of table t with dimension n x m, row i, col j
-#define T(t, m, i, j)           (t)[(i) * (m) + (j)]
+#define TPTR(t, m, i, j)        (&(t)[(i) * (m) + (j)])
+// #define T(t, m, i, j)           (t)[(i) * (m) + (j)]
+#define T(t, m, i, j)           (*(TPTR(t, m, i, j)))
 #define TGET(t, m, i, j)        T((t), (m), (i), (j))
 #define TPUT(t, m, i, j, v)     T((t), (m), (i), (j)) = (v)
 
-#define TNEW(n, m)              (val_t*) calloc((n) * (m), sizeof(val_t))
-#define TFREE(t)                free((t))
 
 
 // shortcuts
 #define T_(i, j)                T(t, m, i, j)
+
 
 void print_seq(seq_t a, size_t n) {
     for (int i = 0; i < n; i++)
