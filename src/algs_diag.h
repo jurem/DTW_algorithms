@@ -1,5 +1,4 @@
 // N.B. Currently a non-working mess of several versions.
-#include "common.h"
 
 #define RELAX_FW(t, m, i, j)    MIN3(T(t, m, i - 1, j), T(t, m, i, j - 1), T(t, m, i - 1, j - 1))
 #define RELAX_BW(t, m, i, j)    MIN3(T(t, m, i + 1, j), T(t, m, i, j + 1), T(t, m, i + 1, j + 1))
@@ -14,7 +13,7 @@
 val_t dtw_diag_fw(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n <= m
     tab_t t = TNEW(n, m);
-    fw_init(t, a, b, n, m, n);
+    fw_init(a, n, b, m, t, n);
     // left triangle
     for (int j = 2; j < n; j++)
         for (int i = 1; i < j; i++)
@@ -85,7 +84,7 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = n / 2 + (m - 1) / 2;
     // top half
-    fw_init(t, a, b, n, m, h);
+    fw_init(a, n, b, m, t, h);
     // upper triangle
     for (int i = 1; i <= m - 2; i++)
         for (int j = 0; j < i; j++)
@@ -118,17 +117,8 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
 
 // ********** forward & backward in parallel **********
 
-typedef struct diag_fwbw_par_t {
-    seq_t a;
-    size_t n;
-    seq_t b;
-    size_t m;
-    tab_t t;
-    size_t h;
-} diag_fwbw_par_t;
-
 void* dtw_diag_fwbw_par_tophalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     // init first row and col
     T_(0, 0) = DIST(a[0], b[0]);
     for (int i = 1; i <= h; i++)
@@ -147,7 +137,7 @@ void* dtw_diag_fwbw_par_tophalf(void *args) {
 }
 
 void* dtw_diag_fwbw_par_bottomhalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     // bottom half
     // init last row and col
     T_(n - 1, m - 1) = DIST(a[n - 1], b[m - 1]);
@@ -171,11 +161,10 @@ val_t dtw_diag_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = n / 2 + (m - 1) / 2;
     // thread data
-    diag_fwbw_par_t data;
-    DTW_DATA_SET(data);
+    DTW_DATA_SET(dtw_thread_data);
     // create and run the top and bottom thread
-    pthread_create(&threads[0], NULL, dtw_diag_fwbw_par_tophalf, &data);
-    pthread_create(&threads[1], NULL, dtw_diag_fwbw_par_bottomhalf, &data);
+    pthread_create(&threads[0], NULL, dtw_diag_fwbw_par_tophalf, 0);
+    pthread_create(&threads[1], NULL, dtw_diag_fwbw_par_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results

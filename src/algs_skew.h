@@ -1,5 +1,4 @@
 // N.B. Currently a non-working mess of several versions.
-#include "common.h"
 
 #define RELAX_FW(t, m, i, j)  MIN3(T(t, m, i - 1, j - 1), T(t, m, i - 1, j), T(t, m, i - 2, j - 1))
 #define RELAX_BW(t, m, i, j)  MIN3(T(t, m, i + 1, j + 1), T(t, m, i + 1, j), T(t, m, i + 2, j + 1))
@@ -64,6 +63,33 @@ val_t dtw_skew_bw(seq_t a, size_t n, seq_t b, size_t m) {
     return r;
 }
 
+// ********** forward reversed **********
+
+val_t dtw_skew_fr(seq_t a, size_t n, seq_t b, size_t m) {
+// assume: n >= m
+    tab_t t = TNEW(n + m - 1, m);
+    // init first col and skewed row
+    T_(0, 0) = DIST(a[n - 1], b[m - 1]);
+    for (int i = 1; i < n; i++)
+        T_(i, 0) = DIST(a[n - 1 - i], b[m - 1]) + T_(i - 1, 0);
+    for (int j = 1; j < m; j++)
+        T_(j, j) = DIST(a[n - 1], b[m - 1 - j]) + T_(j - 1, j - 1);
+    // upper triangle
+    for (int i = 2; i < m; i++)
+        for (int j = 1; j < i; j++)
+            T_(i, j) = DIST(a[n - 1 - i + j], b[m - 1 - j]) + RELAX_FW_(i, j);
+    // middle part
+    for (int i = m; i < n; i++)
+        for (int j = 1; j < m; j++)
+            T_(i, j) = DIST(a[n - 1 - i + j], b[m - 1 - j]) + RELAX_FW_(i, j);
+    // lower triangle
+    for (int i = n; i < n + m - 1; i++)
+        for (int j = i - n + 1; j < m; j++)
+            T_(i, j) = DIST(a[n - 1 - i + j], b[m - 1 - j]) + RELAX_FW_(i, j);
+    val_t r = T_(n + m - 2, m - 1);
+    TFREE(t);
+    return r;
+}
 
 // ********** forward & backward **********
 
@@ -118,7 +144,7 @@ val_t dtw_skew_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
 // ********** forward & backward in parallel **********
 
 void* dtw_skew_fwbw_par_tophalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     // init first col and skewed row
     T_(0, 0) = DIST(a[0], b[0]);
     for (int i = 1; i < h; i++)
@@ -137,7 +163,7 @@ void* dtw_skew_fwbw_par_tophalf(void *args) {
 }
 
 void* dtw_skew_fwbw_par_bottomhalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     int ofs = n == m ? 1 : 0;
     // init last col and skewed row
     T_(n + m - 2, m - 1) = DIST(a[n - 1], b[m - 1]);
@@ -161,11 +187,10 @@ val_t dtw_skew_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n + m - 1, m);
     size_t h = (n + m) / 2;
     // thread data
-    dtw_data_t data;
-    DTW_DATA_SET(data);
+    DTW_DATA_SET(dtw_thread_data);
     // create and run the top and bottom thread
-    pthread_create(&threads[0], NULL, dtw_skew_fwbw_par_tophalf, &data);
-    pthread_create(&threads[1], NULL, dtw_skew_fwbw_par_bottomhalf, &data);
+    pthread_create(&threads[0], NULL, dtw_skew_fwbw_par_tophalf, 0);
+    pthread_create(&threads[1], NULL, dtw_skew_fwbw_par_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results
@@ -191,7 +216,7 @@ void* dtw_skew_fw_strides_stride(void* args) {
     int stride_buf_size = MAX(20, stride / 5);
     int start_i = stride_data[id].start_i;
     int start_j = stride_data[id].start_j;
-    DTW_DATA_GET(&dtw_data);
+    DTW_DATA_GET(dtw_thread_data);
     // printf("thread %d: %d %d %d\n", id, start_i, start_j, stride);
     // upper triangle
     int i = stride_data[id].line = start_i;
@@ -235,7 +260,7 @@ val_t dtw_skew_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n + m - 1, m);
     int h = 0; // dummy
     // init thread data
-    DTW_DATA_SET(dtw_data);
+    DTW_DATA_SET(dtw_thread_data);
     for (int i = 0; i < thread_count; i++) {
         stride_data[i].start_i = 2 + i * stride;
         stride_data[i].start_j = MIN(m - 1, 1 + i * stride);

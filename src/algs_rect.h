@@ -1,6 +1,3 @@
-#include "common.h"
-#include <unistd.h>
-
 // Cell relaxation
 #define RELAX_FW(t, m, i, j)    MIN3(T(t, m, i - 1, j), T(t, m, i, j - 1), T(t, m, i - 1, j - 1))
 #define RELAX_BW(t, m, i, j)    MIN3(T(t, m, i + 1, j), T(t, m, i, j + 1), T(t, m, i + 1, j + 1))
@@ -12,9 +9,10 @@
 
 val_t dtw_rect_fw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    fw_init(t, a, b, n, m, n);
-    fw_block(t, a, b, n, m, 1, n, 1, m);
+    fw_init(a, n, b, m, t, n);
+    fw_block(a, n, b, m, t, 1, n, 1, m);
     val_t r = T_(n - 1, m - 1);
+    // print_tab(t, n, m);
     TFREE(t);
     return r;
 }
@@ -37,6 +35,7 @@ val_t dtw_rect_fr(seq_t a, size_t n, seq_t b, size_t m) {
     fr_init(t, a, b, n, m, n, 0);
     fr_block(t, a, b, n, m, 1, n, 1, m, 0);
     val_t r = T_(n - 1, m - 1);
+    // print_tab(t, n, m);
     TFREE(t);
     return r;
 }
@@ -48,8 +47,8 @@ val_t dtw_rect_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;  // + 1 for rounding up (first half may be one line longer)
     // top half
-    fw_init(t, a, b, n, m, h);
-    fw_block(t, a, b, n, m, 1, h, 1, m);
+    fw_init(a, n, b, m, t, h);
+    fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
     bw_init(t, a, b, n, m, h);
     bw_block(t, a, b, n, m, n - 2, h, m - 2, 0);
@@ -68,8 +67,8 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;  // + 1 for rounding up (first half may be one line longer)
     // top half
-    fw_init(t, a, b, n, m, h);
-    fw_block(t, a, b, n, m, 1, h, 1, m);
+    fw_init(a, n, b, m, t, h);
+    fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
     fr_init(t, a, b, n, m, n - h, h);
     fr_block(t, a, b, n, m, 1, n - h, 1, m, h);
@@ -86,14 +85,14 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
 // ********** forward & backward in parallel **********
 
 void* rect_fw_tophalf(void *args) {
-    DTW_DATA_GET(args);
-    fw_init(t, a, b, n, m, h);
-    fw_block(t, a, b, n, m, 1, h, 1, m);
+    DTW_DATA_GET(dtw_thread_data);
+    fw_init(a, n, b, m, t, h);
+    fw_block(a, n, b, m, t, 1, h, 1, m);
     pthread_exit(NULL);
 }
 
 void* rect_bw_bottomhalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     bw_init(t, a, b, n, m, 0);
     bw_block(t, a, b, n, m, n - 2, h, m - 2, 0);
     pthread_exit(NULL);
@@ -104,10 +103,10 @@ val_t dtw_rect_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;
     // thread data
-    DTW_DATA_SET(dtw_data);
+    DTW_DATA_SET(dtw_thread_data);
     // create and run the top and bottom thread
-    pthread_create(&threads[0], NULL, rect_fw_tophalf, &dtw_data);
-    pthread_create(&threads[1], NULL, rect_bw_bottomhalf, &dtw_data);
+    pthread_create(&threads[0], NULL, rect_fw_tophalf, 0);
+    pthread_create(&threads[1], NULL, rect_bw_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results
@@ -122,7 +121,7 @@ val_t dtw_rect_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
 // ********** forward & forward reversed in parallel **********
 
 void* rect_fr_bottomhalf(void *args) {
-    DTW_DATA_GET(args);
+    DTW_DATA_GET(dtw_thread_data);
     fr_init(t, a, b, n, m, n - h, h);
     fr_block(t, a, b, n, m, 1, n - h, 1, m, h);
     pthread_exit(NULL);
@@ -132,10 +131,10 @@ val_t dtw_rect_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;
     // thread data
-    DTW_DATA_SET(dtw_data);
+    DTW_DATA_SET(dtw_thread_data);
     // create and run the top and bottom thread
-    pthread_create(&threads[0], NULL, rect_fw_tophalf, &dtw_data);
-    pthread_create(&threads[1], NULL, rect_fr_bottomhalf, &dtw_data);
+    pthread_create(&threads[0], NULL, rect_fw_tophalf, 0);
+    pthread_create(&threads[1], NULL, rect_fr_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results
@@ -153,7 +152,7 @@ void* dtw_rect_fw_strides_stride(void* args) {
     int id = (long) args;
     int from_j = stride_data[id].from_j;
     int to_j = stride_data[id].to_j;
-    DTW_DATA_GET(&dtw_data);
+    DTW_DATA_GET(dtw_thread_data);
     // calculate    
     for (int i = 1; i < n; i++) {
         // wait_for_stride_line(id, id - 1, i);
@@ -185,7 +184,7 @@ val_t dtw_rect_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     int h = 0; // dummy
     // init thread data
-    DTW_DATA_SET(dtw_data);
+    DTW_DATA_SET(dtw_thread_data);
     for (int i = 0; i < thread_count; i++) {
         stride_data[i].from_j = 1 + i * stride;
         stride_data[i].to_j = MIN(m, 1 + (i + 1) * stride);
