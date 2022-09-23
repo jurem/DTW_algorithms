@@ -13,7 +13,7 @@
 val_t dtw_diag_fw(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n <= m
     tab_t t = TNEW(n, m);
-    fw_init(a, n, b, m, t, n);
+    rect_fw_init(a, n, b, m, t, n);
     // left triangle
     for (int j = 2; j < n; j++)
         for (int i = 1; i < j; i++)
@@ -37,7 +37,7 @@ val_t dtw_diag_fw(seq_t a, size_t n, seq_t b, size_t m) {
 val_t dtw_diag_bw1(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n <= m
     tab_t t = TNEW(n, m);
-    bw_init(a, n, b, m, t, 0);
+    rect_bw_init(a, n, b, m, t, 0);
     // right triangle
     for (int j = 2; j <= n - 1; j++)
         for (int i = 2; i <= j; i++)
@@ -58,7 +58,7 @@ val_t dtw_diag_bw1(seq_t a, size_t n, seq_t b, size_t m) {
 val_t dtw_diag_bw(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n >= m
     tab_t t = TNEW(n, m);
-    bw_init(a, n, b, m, t, 0);
+    rect_bw_init(a, n, b, m, t, 0);
     // right triangle
     for (int i = 2; i <= m - 1; i++)
         for (int j = 1; j < i; j++)
@@ -84,7 +84,7 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = n / 2 + (m - 1) / 2;
     // top half
-    fw_init(a, n, b, m, t, h);
+    rect_fw_init(a, n, b, m, t, h);
     // upper triangle
     for (int i = 1; i <= m - 2; i++)
         for (int j = 0; j < i; j++)
@@ -94,7 +94,7 @@ val_t dtw_diag_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
         for (int j = 0; j < m - 1; j++)
             T_(i - j, j + 1) = DIST(a[i], b[j]) + RELAX_FW_(i - j, j + 1);
     // bottom half
-    bw_init(a, n, b, m, t, h);
+    rect_bw_init(a, n, b, m, t, h);
     // lower triangle
     for (int i = 0; i <= m - 3; i++)
         for (int j = 0; j <= i; j++)

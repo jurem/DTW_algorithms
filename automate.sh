@@ -124,7 +124,7 @@ RECT_PAR=$(prefix rect_ fwbw_par,fwfr_par,mem_fwfr_par)
 #
 RECT_PAR=$(prefix rect_ fwbw_par,fwfr_par,mem_fwfr_par)
 RECT_STRIDES=$(prefix rect_fw_strides- $STRIDES)
-RECT_ALL="$RECT $RECT_MEM"
+RECT_ALL="$RECT $RECT_MEM $RECT_STRIDES"
 #
 DIAG_BASE=$(prefix diag_ fw,bw)
 DIAG_COMB=$(prefix diag_ fwbw,fwbw_par)
@@ -133,7 +133,7 @@ DIAG_ALL="$DIAG_BASE $DIAG_COMB"
 SKEW_BASE=$(prefix skew_ fw,bw,fr)
 SKEW_COMB=$(prefix skew_ fwbw,fwbw_par)
 SKEW="$SKEW_BASE $SKEW_COMB"
-SKEW_MEM_BASE=$(prefix skew_mem_ fw,fr,fw_s)
+SKEW_MEM_BASE=$(prefix skew_mem_ fw,fr)
 SKEW_MEM_COMB=$(prefix skew_mem_ fwfr,fwfr_par)
 SKEW_MEM="$SKEW_MEM_BASE $SKEW_MEM_COMB"
 #
@@ -148,7 +148,8 @@ PAR=$(postfix _fwbw_par rect,skew)
 STRIDES="$RECT_STRIDES $SKEW_STRIDES"
 MEM="$RECT_MEM $SKEW_MEM"
 #
-ALL="$RECT_ALL $DIAG_ALL $SKEW_ALL"
+#ALL="$RECT_ALL $DIAG_ALL $SKEW_ALL"
+ALL="$RECT_ALL $SKEW_ALL"
 
 # Options
 COMPILE=false

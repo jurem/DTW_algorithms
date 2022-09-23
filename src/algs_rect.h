@@ -9,10 +9,9 @@
 
 val_t dtw_rect_fw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    fw_init(a, n, b, m, t, n);
-    fw_block(a, n, b, m, t, 1, n, 1, m);
+    rect_fw_init(a, n, b, m, t, n);
+    rect_fw_block(a, n, b, m, t, 1, n, 1, m);
     val_t r = T_(n - 1, m - 1);
-    // print_tab(t, n, m);
     TFREE(t);
     return r;
 }
@@ -21,8 +20,8 @@ val_t dtw_rect_fw(seq_t a, size_t n, seq_t b, size_t m) {
 
 val_t dtw_rect_bw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    bw_init(a, n, b, m, t, 0);
-    bw_block(a, n, b, m, t, n - 2, 0, m - 2, 0);
+    rect_bw_init(a, n, b, m, t, 0);
+    rect_bw_block(a, n, b, m, t, n - 2, 0, m - 2, 0);
     val_t r = T_(0, 0);
     TFREE(t);
     return r;
@@ -32,10 +31,9 @@ val_t dtw_rect_bw(seq_t a, size_t n, seq_t b, size_t m) {
 
 val_t dtw_rect_fr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    fr_init(a, n, b, m, t, n, 0);
-    fr_block(a, n, b, m, t, 1, n, 1, m, 0);
+    rect_fr_init(a, n, b, m, t, n, 0);
+    rect_fr_block(a, n, b, m, t, 1, n, 1, m, 0);
     val_t r = T_(n - 1, m - 1);
-    // print_tab(t, n, m);
     TFREE(t);
     return r;
 }
@@ -47,11 +45,11 @@ val_t dtw_rect_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;  // + 1 for rounding up (first half may be one line longer)
     // top half
-    fw_init(a, n, b, m, t, h);
-    fw_block(a, n, b, m, t, 1, h, 1, m);
+    rect_fw_init(a, n, b, m, t, h);
+    rect_fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
-    bw_init(a, n, b, m, t, h);
-    bw_block(a, n, b, m, t, n - 2, h, m - 2, 0);
+    rect_bw_init(a, n, b, m, t, h);
+    rect_bw_block(a, n, b, m, t, n - 2, h, m - 2, 0);
     // merge results
     val_t r = rect_merge(TROW(t, m, h - 1), TROW(t, m, h), m);
     //
@@ -65,11 +63,11 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;  // + 1 for rounding up (first half may be one line longer)
     // top half
-    fw_init(a, n, b, m, t, h);
-    fw_block(a, n, b, m, t, 1, h, 1, m);
+    rect_fw_init(a, n, b, m, t, h);
+    rect_fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
-    fr_init(a, n, b, m, t, n - h, h);
-    fr_block(a, n, b, m, t, 1, n - h, 1, m, h);
+    rect_fr_init(a, n, b, m, t, n - h, h);
+    rect_fr_block(a, n, b, m, t, 1, n - h, 1, m, h);
     // merge results
     val_t r = rect_rev_merge(TROW(t, m, h - 1), TROW(t, m, n - 1), m);
     //
@@ -81,15 +79,15 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* rect_fw_tophalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    fw_init(a, n, b, m, t, half);
-    fw_block(a, n, b, m, t, 1, half, 1, m);
+    rect_fw_init(a, n, b, m, t, half);
+    rect_fw_block(a, n, b, m, t, 1, half, 1, m);
     pthread_exit(NULL);
 }
 
 void* rect_bw_bottomhalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    bw_init(a, n, b, m, t, 0);
-    bw_block(a, n, b, m, t, n - 2, half, m - 2, 0);
+    rect_bw_init(a, n, b, m, t, 0);
+    rect_bw_block(a, n, b, m, t, n - 2, half, m - 2, 0);
     pthread_exit(NULL);
 }
 
@@ -115,8 +113,8 @@ val_t dtw_rect_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* rect_fr_bottomhalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    fr_init(a, n, b, m, t, n - half, half);
-    fr_block(a, n, b, m, t, 1, n - half, 1, m, half);
+    rect_fr_init(a, n, b, m, t, n - half, half);
+    rect_fr_block(a, n, b, m, t, 1, n - half, 1, m, half);
     pthread_exit(NULL);
 }
 
