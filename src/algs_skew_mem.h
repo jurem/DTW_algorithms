@@ -190,7 +190,7 @@ void* stride0(void* args) {
     for (int i = 2; i < half; i++) {
         if (i < n) z[0] = DIST(a[i], b[0]) + y[0];
         int left = MAX(1, i - (int)n + 1);
-        int right = MIN(i, m);
+        int right = MIN(i, stride);
         for (int j = left; j < right; j++)
             z[j] = DIST(a[i - j], b[j]) + MIN3(x[j - 1], y[j - 1], y[j]);
         if (i < m) z[i] = DIST(a[0], b[i]) + y[i - 1];  // the diagonal element
