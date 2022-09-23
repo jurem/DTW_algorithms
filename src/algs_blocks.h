@@ -66,18 +66,18 @@ static inline void fr_block(seq_t a, size_t n, seq_t b, size_t m, tab_t t, size_
 
 // ********** rect merge **********
 
-static inline val_t rect_merge(seq_t a, seq_t b, size_t m) {
+static inline val_t rect_merge(seq_t x, seq_t y, size_t m) {
     val_t r = VALINF;
     for (int j = 0; j < m - 1; j++)
-        r = MIN(r, a[j] + MIN(b[j], b[j + 1]));
-    r = MIN(r, a[m - 1] + b[m - 1]);
+        r = MIN(r, x[j] + MIN(y[j], y[j + 1]));
+    r = MIN(r, x[m - 1] + y[m - 1]);
     return r;
 }
 
-static inline val_t rect_rev_merge(seq_t a, seq_t b, size_t m) {
+static inline val_t rect_rev_merge(seq_t x, seq_t y, size_t m) {
     val_t r = VALINF;
     for (int j = 0; j < m - 1; j++)
-        r = MIN(r, a[j] + MIN(b[m - 1 - j], b[m - 2 - j]));
-    r = MIN(r, a[m - 1] + b[0]);
+        r = MIN(r, x[j] + MIN(y[m - 1 - j], y[m - 2 - j]));
+    r = MIN(r, x[m - 1] + y[0]);
     return r;
 }

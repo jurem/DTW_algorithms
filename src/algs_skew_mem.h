@@ -96,58 +96,49 @@ static inline seq_t skew_mem_fr(seq_t a, size_t n, seq_t b, size_t m, tab_t t, s
     return y;
 }
 
+static inline val_t skew_rev_merge(seq_t x, seq_t y, seq_t w, seq_t z, size_t m) {
+    val_t r = VALINF;
+    for (int j = 0; j < m - 1; j++)
+        r = MIN(r, x[j] + w[m - 1 - j - 1]);
+    for (int j = 0; j < m - 1; j++)
+        r = MIN(r, y[j] + MIN3(w[m - 1 - j], w[m - 1 - j - 1], z[m - 1 - j - 1]));
+    r = MIN(r, y[m - 1] + z[0]);
+    return r;
+}
+
 // ********** basic algorithms **********
 
 val_t dtw_skew_mem_fw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(3, m);
-    seq_t s = skew_mem_fw(a, n, b, m, t, n + m - 1, 1);
-    val_t r = s[m - 1];
+    seq_t z = skew_mem_fw(a, n, b, m, t, n + m - 1, 1);
+    val_t r = z[m - 1];
     TFREE(t);
     return r;
 }
 
 val_t dtw_skew_mem_fr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(3, m);
-    seq_t s = skew_mem_fr(a, n, b, m, t, n);
-    val_t r = s[m - 1];
+    seq_t z = skew_mem_fr(a, n, b, m, t, n);
+    val_t r = z[m - 1];
     TFREE(t);
     return r;
 }
 
+// ********** combined algorithms **********
+
 val_t dtw_skew_mem_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t1 = TNEW(3, m);
     tab_t t2 = TNEW(3, m);
-    size_t h = (n + m) / 2;
-    seq_t s = skew_mem_fw(a, n, b, m, t1, h, 0);
-    seq_t d = skew_mem_fr(a, n, b, m, t2, n + m - 1 - h);
-    // merge
-    seq_t s2;
-    if (s == &t1[0]) s2 = &t1[2*m];
-    else if (s == &t1[m]) s2 = &t1[0];
-    else s2 = &t1[m];
-    seq_t d2;
-    if (d == &t2[0]) d2 = &t2[2*m];
-    else if (d == &t2[m]) d2 = &t2[0];
-    else d2 = &t2[m];
-    // printf("-----------\n");
-    // print_seq(s2, m);
-    // print_seq(s, m);
-    // print_seq(d, m);
-    // print_seq(d2, m);
-    //
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s2[j] + d[m - 1 - j - 1]);
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s[j] + MIN3(d[m - 1 - j], d[m - 1 - j - 1], d2[m - 1 - j - 1]));
-    r = MIN(r, s[m - 1] + d[m - 1]);
-    // free
+    size_t half = (n + m) / 2;
+    seq_t y = skew_mem_fw(a, n, b, m, t1, half, 0);
+    seq_t w = skew_mem_fr(a, n, b, m, t2, n + m - 1 - half);
+    seq_t x = &t1[((half - 2) % 3) * m];
+    seq_t z = &t2[((n + m - 1 - half - 2) % 3) * m];
+    val_t r = skew_rev_merge(x, y, w, z, m);
     TFREE(t1);
     TFREE(t2);
     return r;
 }
-
-// ********** combined algorithms **********
 
 void* skew_mem_fw_tophalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
@@ -162,46 +153,25 @@ void* skew_mem_fr_bottomhalf(void *args) {
 }
 
 val_t dtw_skew_mem_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
-    size_t h = (n + m) / 2;
-    // thread data
     seq_t t = TNEW(6, m);
-    DTW_DATA_SET(dtw_thread_data, h, 0);
-    // create and run the top and bottom thread
+    size_t half = (n + m) / 2;
+    DTW_DATA_SET(dtw_thread_data, half, 0);
+    // create and run the top and the bottom thread
     pthread_attr_t attr;
     pthread_attr_init(&attr);   // privzeti atributi
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_create(&threads[0], &attr, skew_mem_fw_tophalf, 0);
     pthread_create(&threads[1], &attr, skew_mem_fr_bottomhalf, 0);
-    seq_t s;
-    seq_t d;
-    pthread_join(threads[0], (void*)&s);
-    pthread_join(threads[1], (void*)&d);
-    // merge
-    seq_t t1 = &t[0];
-    seq_t t2 = &t[3*m];
-    seq_t s2;
-    if (s == &t1[0]) s2 = &t1[2*m];
-    else if (s == &t1[m]) s2 = &t1[0];
-    else s2 = &t1[m];
-    seq_t d2;
-    if (d == &t2[0]) d2 = &t2[2*m];
-    else if (d == &t2[m]) d2 = &t2[0];
-    else d2 = &t2[m];
-    // printf("-----------\n");
-    // print_seq(s2, m);
-    // print_seq(s, m);
-    // print_seq(d, m);
-    // print_seq(d2, m);
-    //
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s2[j] + d[m - 1 - j - 1]);
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s[j] + MIN3(d[m - 1 - j], d[m - 1 - j - 1], d2[m - 1 - j - 1]));
-    r = MIN(r, s[m - 1] + d[m - 1]);
-    // free
-    TFREE(t);
     pthread_attr_destroy(&attr);
+    // join threads and merge the results
+    seq_t y;
+    seq_t w;
+    pthread_join(threads[0], (void*)&y);
+    pthread_join(threads[1], (void*)&w);
+    seq_t x = &t[((half - 2) % 3) * m];
+    seq_t z = &t[(3 + (n + m - 1 - half - 2) % 3) * m];
+    val_t r = skew_rev_merge(x, y, w, z, m);
+    TFREE(t);
     return r;
 }
 

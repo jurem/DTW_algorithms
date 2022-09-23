@@ -228,7 +228,7 @@ fi
 
 # check
 if $CHECK; then
-    check_algs "$algs" 400
+    check_algs "$algs" 701
 fi
 
 # bench
