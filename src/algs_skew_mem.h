@@ -100,7 +100,7 @@ static inline seq_t skew_mem_fr(seq_t a, size_t n, seq_t b, size_t m, tab_t t, s
 
 val_t dtw_skew_mem_fw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(3, m);
-    seq_t s = skew_mem_fw1(a, n, b, m, t, n + m - 1, 1);
+    seq_t s = skew_mem_fw(a, n, b, m, t, n + m - 1, 1);
     val_t r = s[m - 1];
     TFREE(t);
     return r;
