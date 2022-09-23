@@ -369,7 +369,7 @@ val_t dtw_skew_mem_fw_s(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(3, m);
     int h = n + m - 1;
     // init thread data
-    DTW_DATA_SET(dtw_thread_data, h, stride);
+    DTW_DATA_SET(dtw_thread_data, h, m);
     stride0(NULL);
     //seq_t s = skew_mem_fw_s(a, n, b, m, t, n + m - 1, 1);
     seq_t s = &t[((h-1) % 3) * m];
