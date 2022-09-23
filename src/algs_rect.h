@@ -137,14 +137,14 @@ val_t dtw_rect_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
 
 // ********** forward parallel strides **********
 
-void* dtw_rect_fw_strides_stride(void* args) {
+void* rect_fw_strides_stride(void* args) {
     int id = (long) args;
-    int from_j = stride_data[id].from_j;
-    int to_j = stride_data[id].to_j;
     DTW_DATA_GET(dtw_thread_data);
+    int from_j = 1 + id * stride;
+    int to_j = MIN(m, from_j + stride);
     // calculate    
     for (int i = 1; i < n; i++) {
-        // wait_for_stride_line(id, id - 1, i);
+        wait_for_stride_line(id, id - 1, i);
         if (id > 0) {
             pthread_mutex_lock(&stride_mutex);
             while (stride_data[id - 1].line < i) {
@@ -169,13 +169,11 @@ void* dtw_rect_fw_strides_stride(void* args) {
 }
 
 val_t dtw_rect_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
-    int stride = m / thread_count;
     tab_t t = TNEW(n, m);
     // init thread data
+    size_t stride = (m + thread_count - 1) / thread_count;
     DTW_DATA_SET(dtw_thread_data, 0, stride);
     for (int i = 0; i < thread_count; i++) {
-        stride_data[i].from_j = 1 + i * stride;
-        stride_data[i].to_j = MIN(m, 1 + (i + 1) * stride);
         stride_data[i].line = 0;
         stride_data[i].waitline = INT_MAX;
         pthread_cond_init(&stride_data[i].cond, 0);
@@ -191,14 +189,14 @@ val_t dtw_rect_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
     pthread_attr_init(&attr);   // privzeti atributi
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     for (int i = 0; i < thread_count; i++)
-        pthread_create(&threads[i], &attr, dtw_rect_fw_strides_stride, (void*) (long) i);
+        pthread_create(&threads[i], &attr, rect_fw_strides_stride, (void*) (long) i);
     for (int i = 0; i < thread_count; i++) {
         int rc = pthread_join(threads[i], NULL);
         if (rc > 0) fprintf(stderr, "error: pthread_join: %d\n", rc);
     }
     val_t r = T_(n - 1, m - 1);
-    TFREE(t);
     pthread_attr_destroy(&attr);
+    TFREE(t);
     return r;
 }
 

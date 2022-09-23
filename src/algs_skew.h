@@ -1,5 +1,3 @@
-// N.B. Currently a non-working mess of several versions.
-
 #define RELAX_FW(t, m, i, j)  MIN3(T(t, m, i - 1, j - 1), T(t, m, i - 1, j), T(t, m, i - 2, j - 1))
 #define RELAX_BW(t, m, i, j)  MIN3(T(t, m, i + 1, j + 1), T(t, m, i + 1, j), T(t, m, i + 2, j + 1))
 #define RELAX_FW_(i, j)       RELAX_FW(t, m, i, j)
@@ -210,17 +208,18 @@ val_t dtw_skew_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
 
 // ********** forward parallel strides **********
 
-void* dtw_skew_fw_strides_stride(void* args) {
+void* skew_fw_strides_stride(void* args) {
     int id = (long) args;
-    int stride1 = stride_data[id].stride;
-    int stride_buf_size = MAX(20, stride1 / 5);
-    int start_i = stride_data[id].start_i;
-    int start_j = stride_data[id].start_j;
     DTW_DATA_GET(dtw_thread_data);
+    int start_i = 2 + id * stride;
+    int start_j = MIN(m - 1, 1 + id * stride);
+    stride = start_j + stride < m ? stride : m - start_j;
+    int stride_buf_size = MAX(20, stride / 5);
+
     // printf("thread %d: %d %d %d\n", id, start_i, start_j, stride);
     // upper triangle
     int i = stride_data[id].line = start_i;
-    while (i < start_i + stride1 - 1) {
+    while (i < start_i + stride - 1) {
         // printf("id %d at %d\n", id, i);
         wait_for_stride_line(id, id - 1, i - 1);
         for (int j = start_j; j <= start_j + i - start_i; j++)
@@ -230,7 +229,7 @@ void* dtw_skew_fw_strides_stride(void* args) {
     // middle part
     while (i < start_i + n - 2) {
         wait_for_stride_line(id, id - 1, i - 1);
-        for (int j = start_j; j < start_j + stride1; j++)
+        for (int j = start_j; j < start_j + stride; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
         if (i >= stride_data[id].waitline + stride_buf_size) {
             stride_data[id].line = i;
@@ -240,8 +239,8 @@ void* dtw_skew_fw_strides_stride(void* args) {
     }
     // lower triangle
     wait_for_stride_line(id, id - 1, i - 1);
-    while (i < start_i + n - 2 + stride1) {
-        for (int j = start_j + i - start_i - n + 2; j < start_j + stride1; j++)
+    while (i < start_i + n - 2 + stride) {
+        for (int j = start_j + i - start_i - n + 2; j < start_j + stride; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
         stride_data[id].line = i;
         if (i >= stride_data[id].waitline + stride_buf_size) {
@@ -256,14 +255,11 @@ void* dtw_skew_fw_strides_stride(void* args) {
 
 val_t dtw_skew_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n >= m
-    int stride = m / thread_count;
     tab_t t = TNEW(n + m - 1, m);
+    int stride = (m + thread_count -1) / thread_count;
     // init thread data
     DTW_DATA_SET(dtw_thread_data, 0, stride);
     for (int i = 0; i < thread_count; i++) {
-        stride_data[i].start_i = 2 + i * stride;
-        stride_data[i].start_j = MIN(m - 1, 1 + i * stride);
-        stride_data[i].stride = stride_data[i].start_j + stride < m ? stride : m - stride_data[i].start_j;
         stride_data[i].waitline = INT_MAX;
         pthread_cond_init(&stride_data[i].cond, 0);
     }
@@ -278,15 +274,14 @@ val_t dtw_skew_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
     pthread_attr_init(&attr);   // privzeti atributi
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     for (int i = 0; i < thread_count; i++)
-        pthread_create(&threads[i], &attr, dtw_skew_fw_strides_stride, (void*) (long) i);
+        pthread_create(&threads[i], &attr, skew_fw_strides_stride, (void*) (long) i);
     for (int i = 0; i < thread_count; i++) {
         int rc = pthread_join(threads[i], NULL);
         if (rc > 0) fprintf(stderr, "error: pthread_join: %d\n", rc);
     }
-    // print_tab(t, n + m - 1, m);
     val_t r = T_(n + m - 2, m - 1);
-    TFREE(t);
     pthread_attr_destroy(&attr);
+    TFREE(t);
     return r;
 }
 

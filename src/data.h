@@ -125,26 +125,9 @@ dtw_thread_data_t dtw_thread_data;
     size_t half = data.h; \
     size_t stride = data.s;
 
-// ********** mem stride data **********
-
-typedef struct {
-	volatile int line;
-} dtw_mem_stride_t;
-
-dtw_mem_stride_t mem_strides[MAX_THREADS];
-
-pthread_mutex_t mem_stride_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t mem_stride_cond = PTHREAD_COND_INITIALIZER;
-pthread_cond_t mem_stride_cond_main = PTHREAD_COND_INITIALIZER;
-
 // ********** stride data **********
 
 typedef struct {
-    int from_j;
-    int to_j;
-    int stride;  // stride len
-    int start_i;
-    int start_j;
     volatile int line;      // current line
     volatile int waitline;  // which line to wait for
     pthread_cond_t cond;
