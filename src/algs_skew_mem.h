@@ -1,4 +1,4 @@
-static inline seq_t skew_mem_fw(seq_t a, size_t n, seq_t b, size_t m, tab_t t, size_t end_i, int lower) {
+static inline seq_t skew_mem_fw_old(seq_t a, size_t n, seq_t b, size_t m, tab_t t, size_t end_i, int lower) {
     seq_t x = &t[0];
     seq_t y = &t[m];
     seq_t z = &t[2*m];
@@ -35,7 +35,7 @@ static inline seq_t skew_mem_fw(seq_t a, size_t n, seq_t b, size_t m, tab_t t, s
     return y;
 }
 
-static inline seq_t skew_mem_fw1(seq_t a, size_t n, seq_t b, size_t m, tab_t t, size_t end_i, int lower) {
+static inline seq_t skew_mem_fw(seq_t a, size_t n, seq_t b, size_t m, tab_t t, size_t end_i, int lower) {
     seq_t x = &t[0];
     seq_t y = &t[m];
     seq_t z = &t[2*m];
