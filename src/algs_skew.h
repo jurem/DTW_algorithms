@@ -147,7 +147,7 @@ void* dtw_skew_fwbw_par_tophalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
     // init first col and skewed row
     T_(0, 0) = DIST(a[0], b[0]);
-    for (int i = 1; i < h; i++)
+    for (int i = 1; i < half; i++)
         T_(i, 0) = DIST(a[i], b[0]) + T_(i - 1, 0);
     for (int j = 1; j < m; j++)
         T_(j, j) = DIST(a[0], b[j]) + T_(j - 1, j - 1);
@@ -156,7 +156,7 @@ void* dtw_skew_fwbw_par_tophalf(void *args) {
         for (int j = 1; j < i; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
     // middle part
-    for (int i = m; i < h; i++)
+    for (int i = m; i < half; i++)
         for (int j = 1; j < m; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
     pthread_exit(NULL);
@@ -167,7 +167,7 @@ void* dtw_skew_fwbw_par_bottomhalf(void *args) {
     int ofs = n == m ? 1 : 0;
     // init last col and skewed row
     T_(n + m - 2, m - 1) = DIST(a[n - 1], b[m - 1]);
-    for (int i = n - 2; i > n - h; i--)
+    for (int i = n - 2; i > n - half; i--)
         T_(i + m - 1, m - 1) = DIST(a[i], b[m - 1]) + T_(i + m, m - 1);
     for (int j = m - 2; j >= ofs; j--)
         T_(n - 1 + j, j) = DIST(a[n - 1], b[j]) + T_(n + j, j + 1);
@@ -176,7 +176,7 @@ void* dtw_skew_fwbw_par_bottomhalf(void *args) {
         for (int j = i - n + 2; j <= m - 2; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_BW_(i, j);
     // middle part
-    for (int i = n - 2; i >= h; i--)
+    for (int i = n - 2; i >= half; i--)
         for (int j = 0; j <= m - 2; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_BW_(i, j);
     pthread_exit(NULL);
@@ -187,7 +187,7 @@ val_t dtw_skew_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n + m - 1, m);
     size_t h = (n + m) / 2;
     // thread data
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, h, 0);
     // create and run the top and bottom thread
     pthread_create(&threads[0], NULL, dtw_skew_fwbw_par_tophalf, 0);
     pthread_create(&threads[1], NULL, dtw_skew_fwbw_par_bottomhalf, 0);
@@ -212,15 +212,15 @@ val_t dtw_skew_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* dtw_skew_fw_strides_stride(void* args) {
     int id = (long) args;
-    int stride = stride_data[id].stride;
-    int stride_buf_size = MAX(20, stride / 5);
+    int stride1 = stride_data[id].stride;
+    int stride_buf_size = MAX(20, stride1 / 5);
     int start_i = stride_data[id].start_i;
     int start_j = stride_data[id].start_j;
     DTW_DATA_GET(dtw_thread_data);
     // printf("thread %d: %d %d %d\n", id, start_i, start_j, stride);
     // upper triangle
     int i = stride_data[id].line = start_i;
-    while (i < start_i + stride - 1) {
+    while (i < start_i + stride1 - 1) {
         // printf("id %d at %d\n", id, i);
         wait_for_stride_line(id, id - 1, i - 1);
         for (int j = start_j; j <= start_j + i - start_i; j++)
@@ -230,7 +230,7 @@ void* dtw_skew_fw_strides_stride(void* args) {
     // middle part
     while (i < start_i + n - 2) {
         wait_for_stride_line(id, id - 1, i - 1);
-        for (int j = start_j; j < start_j + stride; j++)
+        for (int j = start_j; j < start_j + stride1; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
         if (i >= stride_data[id].waitline + stride_buf_size) {
             stride_data[id].line = i;
@@ -240,8 +240,8 @@ void* dtw_skew_fw_strides_stride(void* args) {
     }
     // lower triangle
     wait_for_stride_line(id, id - 1, i - 1);
-    while (i < start_i + n - 2 + stride) {
-        for (int j = start_j + i - start_i - n + 2; j < start_j + stride; j++)
+    while (i < start_i + n - 2 + stride1) {
+        for (int j = start_j + i - start_i - n + 2; j < start_j + stride1; j++)
             T_(i, j) = DIST(a[i - j], b[j]) + RELAX_FW_(i, j);
         stride_data[id].line = i;
         if (i >= stride_data[id].waitline + stride_buf_size) {
@@ -258,9 +258,8 @@ val_t dtw_skew_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
 // assume: n >= m
     int stride = m / thread_count;
     tab_t t = TNEW(n + m - 1, m);
-    int h = 0; // dummy
     // init thread data
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, 0, stride);
     for (int i = 0; i < thread_count; i++) {
         stride_data[i].start_i = 2 + i * stride;
         stride_data[i].start_j = MIN(m - 1, 1 + i * stride);

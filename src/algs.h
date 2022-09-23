@@ -53,6 +53,7 @@ const DTWInfo algs[] = {
     { "rect_mem_fwfr_par", dtw_rect_mem_fwfr_par },
     //
     { "skew_mem_fw", dtw_skew_mem_fw },
+    { "skew_mem_fw_s", dtw_skew_mem_fw_s },
     { "skew_mem_fr", dtw_skew_mem_fr },
     { "skew_mem_fwfr", dtw_skew_mem_fwfr },
     { "skew_mem_fwfr_par", dtw_skew_mem_fwfr_par },

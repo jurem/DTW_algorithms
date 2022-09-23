@@ -35,6 +35,7 @@ typedef val_t* tab_t;
 
 // ********** table access **********
 
+#define TROW(t, m, i)			(&(t)[(i) * (m)])
 // element of table t with dimension n x m, row i, col j
 #define TPTR(t, m, i, j)        (&(t)[(i) * (m) + (j)])
 // #define T(t, m, i, j)           (t)[(i) * (m) + (j)]
@@ -94,32 +95,47 @@ seq_t load_seq(const char* filename, size_t *length) {
 pthread_t threads[MAX_THREADS];
 
 typedef struct {
-    seq_t a;
-    size_t n;
-    seq_t b;
-    size_t m;
-    tab_t t;
-    size_t h;
+    seq_t a;	// the first sequence
+    size_t n;	// the length of the first sequence
+    seq_t b;	// the second sequence
+    size_t m;	// the length of the second sequence
+    tab_t t;	// table for computation
+    size_t h;	// up/down decomposition bound
+    size_t s;	// stride length
 } dtw_thread_data_t;
 
 dtw_thread_data_t dtw_thread_data;
 
-// shortcuts for setting and getting
-#define DTW_DATA_SET(data) \
+// shortcuts for setting and getting the thread data
+#define DTW_DATA_SET(data, half, stride) \
     (data).a = (a); \
     (data).n = (n); \
     (data).b = (b); \
     (data).m = (m); \
     (data).t = (t); \
-    (data).h = (h);
+    (data).h = (half); \
+    (data).s = (stride);
 
 #define DTW_DATA_GET(data) \
-    tab_t t = data.t; \
     seq_t a = data.a; \
-    seq_t b = data.b; \
     size_t n = data.n; \
+    seq_t b = data.b; \
     size_t m = data.m; \
-    size_t h = data.h;
+    tab_t t = data.t; \
+    size_t half = data.h; \
+    size_t stride = data.s;
+
+// ********** mem stride data **********
+
+typedef struct {
+	volatile int line;
+} dtw_mem_stride_t;
+
+dtw_mem_stride_t mem_strides[MAX_THREADS];
+
+pthread_mutex_t mem_stride_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t mem_stride_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t mem_stride_cond_main = PTHREAD_COND_INITIALIZER;
 
 // ********** stride data **********
 

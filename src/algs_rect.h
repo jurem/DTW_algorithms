@@ -21,8 +21,8 @@ val_t dtw_rect_fw(seq_t a, size_t n, seq_t b, size_t m) {
 
 val_t dtw_rect_bw(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    bw_init(t, a, b, n, m, 0);
-    bw_block(t, a, b, n, m, n - 2, 0, m - 2, 0);
+    bw_init(a, n, b, m, t, 0);
+    bw_block(a, n, b, m, t, n - 2, 0, m - 2, 0);
     val_t r = T_(0, 0);
     TFREE(t);
     return r;
@@ -32,8 +32,8 @@ val_t dtw_rect_bw(seq_t a, size_t n, seq_t b, size_t m) {
 
 val_t dtw_rect_fr(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
-    fr_init(t, a, b, n, m, n, 0);
-    fr_block(t, a, b, n, m, 1, n, 1, m, 0);
+    fr_init(a, n, b, m, t, n, 0);
+    fr_block(a, n, b, m, t, 1, n, 1, m, 0);
     val_t r = T_(n - 1, m - 1);
     // print_tab(t, n, m);
     TFREE(t);
@@ -50,13 +50,11 @@ val_t dtw_rect_fwbw(seq_t a, size_t n, seq_t b, size_t m) {
     fw_init(a, n, b, m, t, h);
     fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
-    bw_init(t, a, b, n, m, h);
-    bw_block(t, a, b, n, m, n - 2, h, m - 2, 0);
+    bw_init(a, n, b, m, t, h);
+    bw_block(a, n, b, m, t, n - 2, h, m - 2, 0);
     // merge results
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, T_(h - 1, j) + MIN(T_(h, j), T_(h, j + 1)));
-    r = MIN(r, T_(h - 1, m - 1) + T_(h, m - 1));
+    val_t r = rect_merge(TROW(t, m, h - 1), TROW(t, m, h), m);
+    //
     TFREE(t);
     return r;
 }
@@ -70,13 +68,10 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
     fw_init(a, n, b, m, t, h);
     fw_block(a, n, b, m, t, 1, h, 1, m);
     // bottom half
-    fr_init(t, a, b, n, m, n - h, h);
-    fr_block(t, a, b, n, m, 1, n - h, 1, m, h);
+    fr_init(a, n, b, m, t, n - h, h);
+    fr_block(a, n, b, m, t, 1, n - h, 1, m, h);
     // merge results
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, T_(h - 1, j) + MIN(T_(n - 1, m - 1 - j), T_(n - 1, m - 1 - j - 1)));
-    r = MIN(r, T_(h - 1, m - 1) + T_(n - 1, m - 1));
+    val_t r = rect_rev_merge(TROW(t, m, h - 1), TROW(t, m, n - 1), m);
     //
     TFREE(t);
     return r;
@@ -86,15 +81,15 @@ val_t dtw_rect_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* rect_fw_tophalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    fw_init(a, n, b, m, t, h);
-    fw_block(a, n, b, m, t, 1, h, 1, m);
+    fw_init(a, n, b, m, t, half);
+    fw_block(a, n, b, m, t, 1, half, 1, m);
     pthread_exit(NULL);
 }
 
 void* rect_bw_bottomhalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    bw_init(t, a, b, n, m, 0);
-    bw_block(t, a, b, n, m, n - 2, h, m - 2, 0);
+    bw_init(a, n, b, m, t, 0);
+    bw_block(a, n, b, m, t, n - 2, half, m - 2, 0);
     pthread_exit(NULL);
 }
 
@@ -103,17 +98,15 @@ val_t dtw_rect_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;
     // thread data
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, h, 0);
     // create and run the top and bottom thread
     pthread_create(&threads[0], NULL, rect_fw_tophalf, 0);
     pthread_create(&threads[1], NULL, rect_bw_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, T_(h - 1, j) + MIN(T_(h, j), T_(h, j + 1)));
-    r = MIN(r, T_(h - 1, m - 1) + T_(h, m - 1));
+    val_t r = rect_merge(TROW(t, m, h - 1), TROW(t, m, h), m);
+    //
     TFREE(t);
     return r;
 }
@@ -122,8 +115,8 @@ val_t dtw_rect_fwbw_par(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* rect_fr_bottomhalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    fr_init(t, a, b, n, m, n - h, h);
-    fr_block(t, a, b, n, m, 1, n - h, 1, m, h);
+    fr_init(a, n, b, m, t, n - half, half);
+    fr_block(a, n, b, m, t, 1, n - half, 1, m, half);
     pthread_exit(NULL);
 }
 
@@ -131,17 +124,15 @@ val_t dtw_rect_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
     tab_t t = TNEW(n, m);
     size_t h = (n + 1) / 2;
     // thread data
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, h, 0);
     // create and run the top and bottom thread
     pthread_create(&threads[0], NULL, rect_fw_tophalf, 0);
     pthread_create(&threads[1], NULL, rect_fr_bottomhalf, 0);
     pthread_join(threads[0], NULL);
     pthread_join(threads[1], NULL);
     // merge results
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, T_(h - 1, j) + MIN(T_(n - 1, m - 1 - j), T_(n - 1, m - 1 - j - 1)));
-    r = MIN(r, T_(h - 1, m - 1) + T_(n - 1, m - 1));
+    val_t r = rect_rev_merge(TROW(t, m, h - 1), TROW(t, m, n - 1), m);
+    //
     TFREE(t);
     return r;
 }
@@ -182,9 +173,8 @@ void* dtw_rect_fw_strides_stride(void* args) {
 val_t dtw_rect_fw_strides(seq_t a, size_t n, seq_t b, size_t m) {
     int stride = m / thread_count;
     tab_t t = TNEW(n, m);
-    int h = 0; // dummy
     // init thread data
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, 0, stride);
     for (int i = 0; i < thread_count; i++) {
         stride_data[i].from_j = 1 + i * stride;
         stride_data[i].to_j = MIN(m, 1 + (i + 1) * stride);

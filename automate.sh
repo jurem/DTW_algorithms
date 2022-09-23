@@ -133,8 +133,8 @@ DIAG_ALL="$DIAG_BASE $DIAG_COMB"
 SKEW_BASE=$(prefix skew_ fw,bw,fr)
 SKEW_COMB=$(prefix skew_ fwbw,fwbw_par)
 SKEW="$SKEW_BASE $SKEW_COMB"
-SKEW_MEM_BASE=$(prefix skew_mem_ fw,fr)
-SKEW_MEM_COMB=$(prefix skew_mem_ fwfr)
+SKEW_MEM_BASE=$(prefix skew_mem_ fw,fr,fw_s)
+SKEW_MEM_COMB=$(prefix skew_mem_ fwfr,fwfr_par)
 SKEW_MEM="$SKEW_MEM_BASE $SKEW_MEM_COMB"
 #
 SKEW_PAR=$(prefix skew_ fwbw_par,mem_fwfr_par)
@@ -228,7 +228,7 @@ fi
 
 # check
 if $CHECK; then
-    check_algs "$algs" 1000
+    check_algs "$algs" 400
 fi
 
 # bench

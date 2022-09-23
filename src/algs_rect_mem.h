@@ -62,11 +62,9 @@ val_t dtw_rect_mem_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
     size_t h = (n + 1) / 2;
     seq_t s = rect_mem_fw(a, n, b, m, t1, h);
     seq_t d = rect_mem_fr(a, n, b, m, t2, n - h);
-    // merge
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s[j] + MIN(d[m - 1 - j], d[m - 1 - j - 1]));
-    r = MIN(r, s[m - 1] + d[m - 1]);
+    // merge results
+    val_t r = rect_rev_merge(s, d, m);
+    //
     TFREE(t1);
     TFREE(t2);
     return r;
@@ -74,13 +72,13 @@ val_t dtw_rect_mem_fwfr(seq_t a, size_t n, seq_t b, size_t m) {
 
 void* rect_mem_fw_tophalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    seq_t s = rect_mem_fw(a, n, b, m, &t[0], h);
-    pthread_exit(s);
+    seq_t d = rect_mem_fw(a, n, b, m, &t[0], half);
+    pthread_exit(d);
 }
 
 void* rect_mem_fr_bottomhalf(void *args) {
     DTW_DATA_GET(dtw_thread_data);
-    seq_t d = rect_mem_fr(a, n, b, m, &t[2*m], n - h);
+    seq_t d = rect_mem_fr(a, n, b, m, &t[2*m], n - half);
     pthread_exit(d);
 }
 
@@ -88,7 +86,7 @@ val_t dtw_rect_mem_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
     size_t h = (n + 1) / 2;
     // thread data
     seq_t t = TNEW(4, m);
-    DTW_DATA_SET(dtw_thread_data);
+    DTW_DATA_SET(dtw_thread_data, h, 0);
     // create and run the top and bottom thread
     pthread_create(&threads[0], NULL, rect_mem_fw_tophalf, 0);
     pthread_create(&threads[1], NULL, rect_mem_fr_bottomhalf, 0);
@@ -96,11 +94,9 @@ val_t dtw_rect_mem_fwfr_par(seq_t a, size_t n, seq_t b, size_t m) {
     seq_t d;
     pthread_join(threads[0], (void*)&s);
     pthread_join(threads[1], (void*)&d);
-    // merge
-    val_t r = VALINF;
-    for (int j = 0; j < m - 1; j++)
-        r = MIN(r, s[j] + MIN(d[m - 1 - j], d[m - 1 - j - 1]));
-    r = MIN(r, s[m - 1] + d[m - 1]);
+    // merge results
+    val_t r = rect_rev_merge(s, d, m);
+    //
     TFREE(t);
     return r;
 }
